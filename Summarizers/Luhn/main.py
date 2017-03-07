@@ -5,7 +5,6 @@ Created on 06-Mar-2017
 '''
 
 class luhn:
-    pass
     
 if __name__=='__main__':
     pass

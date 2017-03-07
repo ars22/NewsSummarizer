@@ -7,18 +7,23 @@ Created on 07-Mar-2017
 import scrapy.cmdline
 from Scrapers.CNN.Spider.CNNItem import *
 from scrapy.spiders import CrawlSpider
+from newspaper import Config
 import re
 import os
+import newspaper
 from CNN.Spider.CNNItem import CNNItem
 
 class NYSpider(CrawlSpider):
     
     name = "CNN"
     allowed_domains = ["cnn.com"]
-    start_urls = [
-        "https://edition.cnn.com"
-    ]
+    cnn = newspaper.build('http://cnn.com', memoize_articles = True, fetch_images = False)
+    #start_urls = ['http://cnn.com']
     
+    start_urls = [str(article_url) for article_url in cnn.article_urls() if re.match('http://cnn.com/2017/03/.*', str(article_url))][:1]
+    #print start_urls
+    
+        
     def parse(self, response):
         
         newsItem = CNNItem()
@@ -29,7 +34,7 @@ class NYSpider(CrawlSpider):
         print '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n',newsItem['title']
         
         text = ""
-        pars = response.selector.xpath('//*[@class="body__paragraph"]//text()').extract()
+        pars = response.selector.xpath('//*[@class="zn-body__paragraph"]//text()').extract()
         for par in pars:
             par_text = uniToAscii(par)
             if par_text[-1:] != '.':
@@ -47,13 +52,22 @@ class NYSpider(CrawlSpider):
         
         yield newsItem
         
-        storyLinks = response.selector.xpath("//a[descendant::img]/@href").extract()
+        config = Config()
+        config.fetch_images = False
+        config.memoize_articles = False
+        
+        url_build = newspaper.build(url=response.url, config = config);
+        
+        print response.url
+        
+        storyLinks = [article_url for article_url in url_build.article_urls()]
+        
+        print storyLinks
         
         for link in storyLinks:
-            if re.match('/2017/03/0.*\.html', str(link)):
-                pass
+            if re.match('.*/2017/03/0.*\.html', str(link)):
                 print 'Fetching from ',str(link)
-                yield scrapy.Request('https://www.nytimes.com' + str(link))
+                yield scrapy.Request(str(link))
             
     
 def uniToAscii(text):
